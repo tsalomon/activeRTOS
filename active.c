@@ -259,7 +259,7 @@ static void Next_Kernel_Request() {
 
     while (1) {
 
-        PORTA |= (1 << PA4);
+
 
         Cp->request = NONE; /* clear its request */
 
@@ -270,6 +270,7 @@ static void Next_Kernel_Request() {
         Exit_Kernel(); /* or CSwitch() */
 
         /* if this task makes a system call, it will return to here! */
+        PORTA |= (1 << PA4);
 
         /* save the Cp's stack pointer */
         Cp->sp = CurrentSp;
@@ -283,6 +284,7 @@ static void Next_Kernel_Request() {
                 /* NONE could be caused by a timer interrupt */
                 Cp->state = READY;
                 Dispatch();
+                PORTA &= ~(1 << PA4);
                 break;
             case TERMINATE:
                 /* deallocate all resources used by this task */
@@ -293,8 +295,6 @@ static void Next_Kernel_Request() {
                 /* Houston! we have a problem here! */
                 break;
         }
-
-        PORTA &= ~(1 << PA4);
     }
 }
 
@@ -360,9 +360,8 @@ void Task_Create(voidfuncptr f) {
 void Task_Next() {
     if (KernelActive) {
         Disable_Interrupt();
-        Cp->request = NEXT;
-
         PORTA |= (1 << PA3);
+        Cp->request = NEXT;
         Enter_Kernel();
         PORTA&= ~(1 << PA3);
     }
@@ -419,7 +418,7 @@ ISR(TIMER1_COMPA_vect)
 {
     PORTA |= (1 << PA2);
     Task_Next();
-    PORTA&= ~(1 << PA2);
+    PORTA &= ~(1 << PA2);
 }
 
 void Setup_Interrupt_Timer() {
@@ -497,14 +496,6 @@ void main() {
     Task_Create(NOP_Task1);
     Task_Create(NOP_Task2);
     Setup_Interrupt_Timer();
-
-    LED_On();
-    delay(500);
-    LED_Off();
-    delay(500);
-    LED_On();
-    delay(2000);
-    LED_Off();
 
     OS_Start();
 }
