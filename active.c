@@ -258,6 +258,9 @@ static void Next_Kernel_Request() {
     Dispatch(); /* select a new task to run */
 
     while (1) {
+
+        PORTA |= (1 << PA4);
+
         Cp->request = NONE; /* clear its request */
 
         /* activate this newly selected task */
@@ -290,6 +293,8 @@ static void Next_Kernel_Request() {
                 /* Houston! we have a problem here! */
                 break;
         }
+
+        PORTA &= ~(1 << PA4);
     }
 }
 
@@ -356,7 +361,10 @@ void Task_Next() {
     if (KernelActive) {
         Disable_Interrupt();
         Cp->request = NEXT;
+
+        PORTA |= (1 << PA3);
         Enter_Kernel();
+        PORTA&= ~(1 << PA3);
     }
 }
 
@@ -457,13 +465,16 @@ void LED_Off(){
  *  LED: status
  *  PA0: Task 1 enter and exit (execution time)
  *  PA1: Task 2 enter and exit (execution time)
- *  PA2:
+ *  PA2: Timer interrupt disabled time
+ *  PA3: Context-switching overhead
+ *  PA4: scheduling timeliness
  */
 void Setup_IO_Ports() {
 
     //use PORT A for measurements: PA0 (22) -> PA7 (29) [8 pins]
     //set PORT A to output
-    DDRA = 0xFF;    //all ones
+    DDRA = 0xFF;    //all ones (output)
+    PORTA = 0x00;   //all low
 
     DDRB |= (1 << PB7);     //led pin (13)
     LED_Off();
